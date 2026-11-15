@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rainbow Child Development Center - Bill Generator</title>
+<style>
+  :root { --ink:#111; --line:#222; --muted:#555; --paper:#fff; --bg:#eef1f5; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:24px; background:var(--bg); color:var(--ink); font-family:Arial,Helvetica,sans-serif; }
+  .app { max-width:1100px; margin:auto; display:grid; grid-template-columns:330px minmax(0,1fr); gap:22px; align-items:start; }
+  .controls { background:#fff; border:1px solid #d7dce2; border-radius:10px; padding:18px; box-shadow:0 3px 14px #0000000b; }
+  h1 { font-size:19px; margin:0 0 14px; }
+  .controls h2 { font-size:14px; margin:18px 0 9px; padding-bottom:6px; border-bottom:1px solid #e5e7eb; }
+  label { display:block; font-size:12px; font-weight:700; margin:9px 0 4px; }
+  input, textarea, select { width:100%; padding:8px 9px; border:1px solid #cbd1d8; border-radius:5px; font:13px Arial; background:#fff; }
+  textarea { min-height:54px; resize:vertical; }
+  .btnrow { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  button { border:0; border-radius:6px; padding:9px 12px; font-weight:700; cursor:pointer; background:#1d4ed8; color:#fff; }
+  button.secondary { background:#e5e7eb; color:#111827; }
+  button.danger { background:#b91c1c; }
+  .hint { color:var(--muted); font-size:11px; line-height:1.45; margin-top:10px; }
+  .paper-wrap { overflow:auto; }
+  .invoice { width:210mm; min-height:297mm; margin:0 auto; background:var(--paper); padding:10mm 9mm 9mm; box-shadow:0 4px 20px #00000018; font-size:10px; }
+  .invoice table { width:100%; border-collapse:collapse; }
+  .invoice td, .invoice th { border:1px solid var(--line); padding:4px 5px; vertical-align:middle; }
+  .invoice .no-border td { border:0; }
+  .brand-title { text-align:center; font-size:17px; font-weight:800; letter-spacing:.25px; padding:4px 0 6px; }
+  .top-grid td { height:64px; vertical-align:top; }
+  .doctor { width:48%; line-height:1.45; font-size:9px; }
+  .address { line-height:1.4; font-size:9px; }
+  .bill-number { text-align:left; font-size:16px; font-weight:800; padding:5px !important; margin-top: 8px; }
+  .patient td { height:24px; }
+  .patient strong { font-size:9px; }
+  .therapy-note { line-height:1.5; padding:7px 3px 5px; font-size:9px; }
+  .items th { font-weight:700; text-align:center; background:#f5f5f5; }
+  .items td { height:20px; }
+  .items .center { text-align:center; }
+  .items .right { text-align:right; }
+  .items input { border:0; border-radius:0; padding:1px; font:10px Arial; min-width:0; width:100%; }
+  .items input[type="date"] { color: transparent; }
+  .items input[type="date"]:valid { color: inherit; }
+  .items input:focus { outline:1px solid #60a5fa; background:#eff6ff; color: inherit; }
+  .items .row-action { width:24px; text-align:center; }
+  .remove-row { background:transparent; color:#b91c1c; padding:0 3px; font-size:14px; }
+  .totals { margin-top:5px; }
+  .totals td { border:0; padding:2px 4px; }
+  .totals .label { text-align:right; font-weight:700; }
+  .totals .value { width:120px; text-align:right; border-bottom:1px solid #777; }
+  .amount-words { border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:6px 4px; margin-top:4px; font-size:9px; }
+  .prepared { text-align:center; margin-top:24px; font-size:9px; }
+  .signature { text-align:right; margin-top:32px; padding-right:18px; font-size:9px; }
+  @media(max-width:850px) { body{padding:10px}.app{grid-template-columns:1fr}.invoice{margin:0;width:210mm} }
+  .invoice [contenteditable="true"] { outline:1px dashed transparent; cursor:text; }
+  .invoice [contenteditable="true"]:focus { outline:1px dashed #60a5fa; background:#eff6ff; }
+  body.receipt-mode .invoice { width:80mm; min-height:0; padding:5mm 4mm; font-size:9px; }
+  body.receipt-mode .brand-title { font-size:13px; }
+  body.receipt-mode .top-grid td { height:auto; }
+  body.receipt-mode .bill-number { font-size:14px; }
+  body.receipt-mode .items th, body.receipt-mode .items td { padding:3px 2px; font-size:8px; }
+  body.receipt-mode .items th:nth-child(4), body.receipt-mode .items td:nth-child(4) { display:none; }
+  body.receipt-mode .signature { margin-top:16px; }
+  @page { size:A4; margin:0; }
+  @page receiptPage { size:80mm auto; margin:3mm; }
+  @media print {
+    body { padding:0; background:#fff; }
+    .controls { display:none !important; }
+    .app { display:block; max-width:none; }
+    .paper-wrap { overflow:visible; }
+    .invoice { width:210mm; height:297mm; min-height:0; margin:0; box-shadow:none; padding:8mm 8mm 7mm; overflow:hidden; transform-origin:top left; }
+    body.receipt-mode { page:receiptPage; }
+    body.receipt-mode .invoice { width:72mm; height:auto; min-height:0; padding:0; overflow:visible; transform:none !important; }
+    body.receipt-mode .top-grid td { height:auto; }
+    .no-print { display:none !important; }
+    .items input { padding:0; }
+    .invoice { font-size:9px; }
+    .invoice td, .invoice th { padding:2px 3px; }
+    .items td { height:16px; }
+    .therapy-note { padding:4px 2px; line-height:1.3; }
+    .signature { margin-top:16px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="controls">
+    <h1>Bill Generator</h1>
+    <div class="hint">Edit the fields in the panel or click text on the bill to edit it directly. Choose A4 bill or receipt format before printing.</div>
+    <h2>Center details</h2>
+    <label>Center name</label><input id="centerName" value="RAINBOW CHILD DEVELOPMENT CENTER" />
+    <h2>Therapist details</h2>
+    <div id="therapistControls"></div>
+    <div class="btnrow"><button type="button" class="secondary" onclick="addTherapist()">+ Add therapist</button></div>
+    <label>Center address</label><textarea id="centerAddress">H. No. 10, Gali No. 1, 1st Floor, A-Block, Kaushik Enclave, Opp. Burari Govt. Hospital, Burari, Delhi-110084</textarea>
+    <label>Mobile</label><input id="mobile" value="0-011 35729549" />
+    <label>Email</label><input id="email" value="rainbowchildschool@gmail.com" />
+    <h2>Bill & patient details</h2>
+    <label>Bill number</label><input id="billNo" value="" />
+    <label>Student name</label><input id="student" value="" />
+    <label>Age</label><input id="age" placeholder="Enter age" value="" />
+    <label>Address</label><input id="patientAddress" value="" />
+    <label>Bill date</label><input id="billDate" type="date" value="" />
+    <label>Prepared on</label><input id="preparedDate" type="date" value="" />
+    <h2>Payment adjustments</h2>
+    <label>Advance / amount paid (₹)</label><input id="paid" type="number" min="0" step="0.01" value="" />
+    <label>Discount (₹)</label><input id="discount" type="number" min="0" step="0.01" value="" />
+    <h2>Add session quick inputs</h2>
+    <label>Session date</label><input id="newSessionDate" type="date" />
+    <label>Treatment / session</label><input id="newSessionType" placeholder="e.g. ST, OT, SE" value="ST" />
+    <label>Charges (₹)</label><input id="newSessionCharge" type="number" min="0" step="0.01" placeholder="500" value="500" />
+    <h2>Print format</h2>
+    <label>Choose format</label>
+    <select id="printFormat" onchange="setPrintFormat(this.value)">
+      <option value="a4">A4 full-page bill</option>
+      <option value="receipt">Receipt (80 mm)</option>
+    </select>
+    <div class="btnrow">
+      <button onclick="addSessionFromControls()">+ Add session</button>
+      <button onclick="window.print()">Print / Save PDF</button>
+      <button class="secondary" onclick="resetBill()">Reset blank</button>
+    </div>
+    <p class="hint">Tip: In the print dialog, choose “Save as PDF” to create a PDF copy. Browser printing hides this control panel.</p>
+  </aside>
+
+  <main class="paper-wrap">
+    <section class="invoice" id="invoice">
+      <div class="brand-title" data-bind="centerName">RAINBOW CHILD DEVELOPMENT CENTER</div>
+      <table class="top-grid">
+        <tr>
+          <td class="doctor">
+            <div id="therapistPrint"><b>Dr. Dilip Kumar</b><br>Speech Therapist<br>Reg. No.: B-10196</div>
+            <div class="bill-number"><small style="font-size:9px;display:block">Bill No. -</small><span data-bind="billNo"></span></div>
+          </td>
+          <td class="address"><b>Address:</b> <span data-bind="centerAddress">H. No. 10, Gali No. 1, 1st Floor, A-Block, Kaushik Enclave, Opp. Burari Govt. Hospital, Burari, Delhi-110084</span><br><b>Mob.:</b> <span data-bind="mobile">0-011 35729549</span><br><b>E-mail:</b> <span data-bind="email">rainbowchildschool@gmail.com</span></td>
+        </tr>
+      </table>
+      <table class="patient">
+        <tr><td style="width:60%"><strong>Student Name:-</strong> <span data-bind="student"></span></td><td><strong>Age:-</strong> <span data-bind="age"></span></td></tr>
+        <tr><td colspan="2"><strong>Address:-</strong> <span data-bind="patientAddress"></span></td></tr>
+        <tr><td><strong>Bill Date:-</strong> <span data-bind="billDate"></span></td><td><strong>Prepared On:-</strong> <span data-bind="preparedDate"></span></td></tr>
+      </table>
+      <div class="therapy-note">
+        1. <b>Occupational Therapy-OT</b><br>
+        <b>2. Speech Therapy-ST</b><br>
+        <b>3. Special Education-SE</b>
+      </div>
+      <table class="items">
+        <thead><tr><th style="width:8%">S. No.</th><th style="width:24%">Date</th><th style="width:29%">TREATMENT/SESSION</th><th style="width:12%">CURRENCY</th><th>CHARGES FOR THERAPY (₹)</th><th class="row-action no-print"></th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <table class="totals">
+        <tr><td class="label">TOTAL CHARGES OF SERVICES/ITEMS:</td><td class="value" id="grossTotal"></td></tr>
+        <tr><td class="label">DISCOUNT:</td><td class="value" id="discountView"></td></tr>
+        <tr><td class="label">NET AMOUNT:</td><td class="value" id="netTotal"></td></tr>
+        <tr><td class="label">AMOUNT PAID:</td><td class="value" id="paidView"></td></tr>
+        <tr><td class="label">BALANCE DUE:</td><td class="value" id="balance"></td></tr>
+      </table>
+      <div class="amount-words"><b>AMOUNT IN WORDS:-</b> <span id="words"></span></div>
+      <div class="signature">Authorized Signature</div>
+    </section>
+  </main>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const fieldIds = ['centerName','centerAddress','mobile','email','billNo','student','age','patientAddress'];
+let therapists = [{name:'Dr. Dilip Kumar', qualification:'Speech Therapist', registration:'B-10196'}];
+fieldIds.forEach(id => $(id).addEventListener('input', () => {
+  document.querySelectorAll(`[data-bind="${id}"]`).forEach(el => el.textContent = $(id).value);
+}));
+$('preparedDate').addEventListener('change', updatePreparedDate);
+$('billDate').addEventListener('change', updateBillDate);
+function updateBillDate(){ document.querySelector('[data-bind="billDate"]').textContent = formatDate($('billDate').value); }
+function formatDate(value) {
+  if (!value) return '';
+  const [y,m,d] = value.split('-'); return `${Number(d)}/${Number(m)}/${y}`;
+}
+function updatePreparedDate(){ document.querySelector('[data-bind="preparedDate"]').textContent = formatDate($('preparedDate').value); }
+function renderTherapists(){
+  $('therapistControls').innerHTML='';
+  therapists.forEach((t,i)=>{
+    const block=document.createElement('div'); block.style.cssText='border:1px solid #d9dee5;border-radius:6px;padding:9px;margin:8px 0';
+    block.innerHTML=`<label>Therapist ${i+1} name</label><input data-therapist="name" data-index="${i}" value="${escapeAttr(t.name)}" placeholder="Therapist name"><label>Qualification</label><input data-therapist="qualification" data-index="${i}" value="${escapeAttr(t.qualification)}" placeholder="Qualification"><label>Registration number</label><input data-therapist="registration" data-index="${i}" value="${escapeAttr(t.registration)}" placeholder="Registration number"><div class="btnrow"><button type="button" class="danger" onclick="removeTherapist(${i})" ${therapists.length===1?'disabled':''}>Remove therapist</button></div>`;
+    block.querySelectorAll('input').forEach(input=>input.addEventListener('input',()=>{therapists[Number(input.dataset.index)][input.dataset.therapist]=input.value; refreshTherapistViews();}));
+    $('therapistControls').appendChild(block);
+  });
+  refreshTherapistViews();
+}
+function escapeAttr(value){return String(value||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function addTherapist(){therapists.push({name:'',qualification:'',registration:''});renderTherapists();}
+function removeTherapist(i){if(therapists.length===1)return;therapists.splice(i,1);renderTherapists();refreshTherapistViews();}
+function refreshTherapistViews(){
+  $('therapistPrint').innerHTML=therapists.map(t=>`<b>${escapeHtml(t.name||'Therapist')}</b>${t.qualification?'<br>'+escapeHtml(t.qualification):''}${t.registration?'<br>Reg. No.: '+escapeHtml(t.registration):''}`).join('<br><br>');
+}
+function escapeHtml(value){return String(value||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
+function addRow(date='', session='', charge='') {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td class="center serial"></td><td><input aria-label="Session date" type="date" value="${date}" style="text-align:center;"></td><td><input aria-label="Treatment or session" value="${session}"></td><td class="center">INR</td><td><input aria-label="Charge in rupees" class="charge right" type="number" min="0" step="0.01" value="${charge}"></td><td class="row-action no-print"><button class="remove-row" title="Remove row" onclick="this.closest('tr').remove();recalculate()">×</button></td>`;
+  tr.querySelectorAll('input,select').forEach(input => input.addEventListener('input', recalculate));
+  $('rows').appendChild(tr); renumber(); recalculate();
+}
+
+function addSessionFromControls() {
+  const date = $('newSessionDate').value;
+  const session = $('newSessionType').value;
+  const charge = $('newSessionCharge').value;
+  addRow(date, session, charge);
+}
+
+function renumber(){ [...document.querySelectorAll('#rows tr')].forEach((row,i)=>row.querySelector('.serial').textContent=i+1); }
+function money(n){ 
+  const val = Number(n) || 0;
+  if (val === 0) return '';
+  return val.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); 
+}
+function wordsIndian(num){
+  num = Math.round(Number(num)||0);
+  if(num===0) return '';
+  const one=['','ONE','TWO','THREE','FOUR','FIVE','SIX','SEVEN','EIGHT','NINE','TEN','ELEVEN','TWELVE','THIRTEEN','FOURTEEN','FIFTEEN','SIXTEEN','SEVENTEEN','EIGHTEEN','NINETEEN'];
+  const ten=['','','TWENTY','THIRTY','FORTY','FIFTY','SIXTY','SEVENTY','EIGHTY','NINETY'];
+  function under1000(n){ let s=''; if(n>=100){s+=one[Math.floor(n/100)]+' HUNDRED ';n%=100;} if(n>=20){s+=ten[Math.floor(n/10)]+' ';n%=10;} if(n>0)s+=one[n]+' '; return s; }
+  let parts=[]; const units=[[10000000,'CRORE'],[100000,'LAKH'],[1000,'THOUSAND'],[1,'']];
+  for(const [v,name] of units){ if(num>=v){const q=Math.floor(num/v); parts.push(under1000(q)+name); num%=v;} }
+  return (parts.join(' ').trim()+' RUPEES ONLY').replace(/\s+/g,' ');
+}
+function recalculate(){
+  const gross=[...document.querySelectorAll('#rows .charge')].reduce((s,input)=>s+(Number(input.value)||0),0);
+  const discount=Math.max(0,Number($('discount').value)||0), net=Math.max(0,gross-discount);
+  const paid=Math.max(0,Number($('paid').value)||0), balance=Math.max(0,net-paid);
+  $('grossTotal').textContent=money(gross); $('discountView').textContent=money(discount);
+  $('netTotal').textContent=money(net); $('paidView').textContent=money(paid); $('balance').textContent=money(balance);
+  $('words').textContent=wordsIndian(net);
+  renumber();
+}
+['paid','discount'].forEach(id=>$(id).addEventListener('input',recalculate));
+function resetBill(){
+  if(!confirm('Reset the bill to blank?')) return;
+  $('billNo').value=''; $('student').value=''; $('age').value=''; $('patientAddress').value=''; $('paid').value=''; $('discount').value=''; $('billDate').value=''; $('preparedDate').value='';
+  $('newSessionDate').value=''; $('newSessionType').value='ST'; $('newSessionCharge').value='500';
+  document.querySelectorAll('[data-bind]').forEach(el => el.textContent = '');
+  therapists=[{name:'Dr. Dilip Kumar',qualification:'Speech Therapist',registration:'B-10196'}];renderTherapists(); $('rows').innerHTML=''; recalculate();
+}
+renderTherapists(); recalculate();
+enableDirectEditing();
+
+function enableDirectEditing() {
+  const invoice = $('invoice');
+  invoice.querySelectorAll('td, th, .brand-title, .therapy-note, .amount-words, .prepared, .signature, .doctor, .address')
+    .forEach(el => {
+      if (el.querySelector('input, button, select') ||
+          ['grossTotal','discountView','netTotal','paidView','balance','words'].includes(el.id)) return;
+      el.setAttribute('contenteditable', 'true');
+      el.setAttribute('spellcheck', 'true');
+    });
+}
+function setPrintFormat(format) {
+  document.body.classList.toggle('receipt-mode', format === 'receipt');
+  $('invoice').style.transform = 'none';
+}
+
+function fitInvoiceToOnePage(){
+  const invoice = $('invoice');
+  invoice.style.transform = 'none';
+  const available = invoice.clientHeight;
+  const content = invoice.scrollHeight;
+  if (content > available && available > 0) {
+    const scaleY = Math.max(0.35, available / content);
+    invoice.style.transform = `scaleY(${scaleY})`;
+  }
+}
+window.addEventListener('beforeprint', fitInvoiceToOnePage);
+window.addEventListener('afterprint', () => { $('invoice').style.transform = 'none'; });
+</script>
+</body>
+</html>
